@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  ai-dashboard:
+    build: .
+    ports:
+      - "8881:3000"
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://dashboard:${DB_PASSWORD}@postgres:5432/ai_spend
+      - OPENAI_API_KEY_FILE=/run/secrets/openai_api_key
+      - ANTHROPIC_API_KEY_FILE=/run/secrets/anthropic_api_key
+    secrets:
+      - db_password
+      - openai_api_key
+      - anthropic_api_key
+    volumes:
+      - ./ssl:/app/ssl:ro
+    networks:
+      - ai-dashboard-network
+
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./server/migrations/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    environment:
+      - POSTGRES_DB=ai_spend
+      - POSTGRES_USER=dashboard
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+    secrets:
+      - db_password
+    networks:
+      - ai-dashboard-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dashboard -d ai_spend"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  openai_api_key:
+    file: ./secrets/openai_api_key.txt
+  anthropic_api_key:
+    file: ./secrets/anthropic_api_key.txt
+
+networks:
+  ai-dashboard-network:
+    driver: bridge

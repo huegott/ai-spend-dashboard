@@ -1,0 +1,63 @@
+# Portainer Stack Configuration for huegott/ai-spend-dashboard
+# Copy and paste this into Portainer Stack Web Editor
+
+version: '3.8'
+
+services:
+  ai-dashboard:
+    build: 
+      context: https://github.com/huegott/ai-spend-dashboard.git#main
+      dockerfile: Dockerfile
+    image: ai-spend-dashboard:latest
+    ports:
+      - "8881:3000"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://dashboard:${DB_PASSWORD}@postgres:5432/ai_spend
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - PORT=3000
+    networks:
+      - ai-dashboard-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=ai_spend
+      - POSTGRES_USER=dashboard
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    networks:
+      - ai-dashboard-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dashboard -d ai_spend"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  ai-dashboard-network:
+    driver: bridge
+
+# ENVIRONMENT VARIABLES TO SET IN PORTAINER:
+# 
+# DB_PASSWORD=ai_spend_secure_password_2024
+# OPENAI_API_KEY=sk-your-real-openai-api-key-here
+# ANTHROPIC_API_KEY=your-real-anthropic-api-key-here
