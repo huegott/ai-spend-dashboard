@@ -2,10 +2,10 @@ version: '3.8'
 
 services:
   ai-dashboard:
+    image: ai-spend-dashboard:latest
     build:
       context: .
       dockerfile: Dockerfile
-    image: ai-spend-dashboard:latest
     ports:
       - "9443:3000"
     restart: unless-stopped
@@ -37,10 +37,7 @@ services:
 
 volumes:
   postgres_data:
-    driver: local
   ssl_certs:
-    driver: local
 
 networks:
   ai-dashboard-network:
-    driver: bridge

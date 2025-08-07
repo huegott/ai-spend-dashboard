@@ -15,6 +15,11 @@ RUN npm ci --only=production
 # Copy application code
 COPY . .
 
+# Copy and set up secure entrypoint
+COPY docker-entrypoint.sh /app/
+COPY secure-secrets.js /app/
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Install and build client
 RUN cd client && npm ci && npm run build
 
@@ -42,5 +47,6 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node healthcheck.js
 
-# Start the application
+# Use secure entrypoint to load secrets before starting app
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["npm", "start"]
